@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-dark: #0a0e17;
+    --card-dark: #121826;
+    --border-dark: #1f2937;
+  }
+}
+
+/* Zero-margin transparent background for OBS Studio Browser Source */
+.obs-transparent-root {
+  background-color: transparent !important;
+  background: transparent !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Animations for broadcast graphics */
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.5), inset 0 0 15px rgba(245, 158, 11, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(245, 158, 11, 0.9), inset 0 0 25px rgba(245, 158, 11, 0.6);
+  }
+}
+
+@keyframes wicketAlert {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.7);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 45px rgba(239, 68, 68, 1);
+    transform: scale(1.03);
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes bannerStinger {
+  0% {
+    transform: scale(0.6) translateY(20px);
+    opacity: 0;
+  }
+  15% {
+    transform: scale(1.08) translateY(0);
+    opacity: 1;
+  }
+  25% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  85% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.9) translateY(-30px);
+    opacity: 0;
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 1.5s infinite;
+}
+
+.animate-wicket-alert {
+  animation: wicketAlert 0.8s infinite ease-in-out;
+}
+
+.animate-slide-in-up {
+  animation: slideInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-stinger {
+  animation: bannerStinger 3.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
