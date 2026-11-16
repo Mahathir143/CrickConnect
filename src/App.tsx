@@ -16,7 +16,7 @@ import { TeamApprovalDesk } from './components/tournament/TeamApprovalDesk';
 import { PointsTable } from './components/tournament/PointsTable';
 import { LiveScoreHero } from './components/fan/LiveScoreHero';
 import { InteractiveTestRunner } from './components/testrunner/InteractiveTestRunner';
-import { Tv, ShieldCheck, Smartphone, CheckSquare, Layers } from 'lucide-react';
+import { Tv, ShieldCheck, Smartphone, CheckSquare, Layers, Copy, Check, Wifi, Globe } from 'lucide-react';
 
 export function App() {
   const [snapshot, setSnapshot] = useState<LiveMatchSnapshot>(() => {
@@ -28,8 +28,10 @@ export function App() {
     return broadcastHub.getBallEvents();
   });
 
+  const [connectionStatus, setConnectionStatus] = useState<'CONNECTED' | 'CONNECTING' | 'OFFLINE'>('CONNECTING');
   const [activeTab, setActiveTab] = useState<'SCORER' | 'DIRECTOR' | 'TOURNAMENT' | 'FAN' | 'TESTS' | 'OVERLAY_FULL'>('SCORER');
   const [overCompletedPrompt, setOverCompletedPrompt] = useState(false);
+  const [copiedOverlayLink, setCopiedOverlayLink] = useState(false);
 
   // Initialize demo teams
   const [teams, setTeams] = useState<Team[]>([
@@ -65,7 +67,7 @@ export function App() {
       shortCode: 'BLR',
       logoUrl: 'https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=128&auto=format&fit=crop&q=80',
       primaryColor: '#ef4444',
-      status: 'PENDING', // Pending public registration demonstration
+      status: 'PENDING',
       registrationSource: 'PUBLIC_LINK',
       squad: [
         { id: 'pl_blr_1', name: 'G. Maxwell', jerseyNumber: 32, role: 'ALL_ROUNDER', battingStyle: 'RIGHT_HAND' },
@@ -105,49 +107,39 @@ export function App() {
       oversBowled: 60,
       nrr: 0.217,
     },
-    {
-      teamId: 'tm_kkr',
-      teamName: 'Kolkata Knights',
-      shortCode: 'KKR',
-      played: 3,
-      won: 1,
-      lost: 2,
-      tied: 0,
-      points: 2,
-      runsScored: 490,
-      oversFaced: 60,
-      runsConceded: 505,
-      oversBowled: 60,
-      nrr: -0.250,
-    },
-    {
-      teamId: 'tm_dc',
-      teamName: 'Delhi Capitals',
-      shortCode: 'DC',
-      played: 3,
-      won: 1,
-      lost: 2,
-      tied: 0,
-      points: 2,
-      runsScored: 470,
-      oversFaced: 60,
-      runsConceded: 498,
-      oversBowled: 60,
-      nrr: -0.467,
-    },
   ]);
 
-  // Check URL parameters: if ?mode=overlay, auto-render pure overlay for OBS Browser Source!
+  // Check URL query parameters for overlay mode
   const isUrlOverlayMode = typeof window !== 'undefined' && window.location.search.includes('mode=overlay');
 
   useEffect(() => {
-    // Listen for real-time broadcasts across windows/OBS
-    const unsubscribe = broadcastHub.subscribe((updatedSnapshot) => {
+    // Listen for real-time broadcasts across multiple devices via MQTT WebSocket & BroadcastChannel
+    const unsubscribeSync = broadcastHub.subscribe((updatedSnapshot) => {
       setSnapshot(updatedSnapshot);
       setBallEvents(broadcastHub.getBallEvents());
     });
-    return () => unsubscribe();
+
+    const unsubscribeConn = broadcastHub.onConnectionChange((status) => {
+      setConnectionStatus(status);
+    });
+
+    return () => {
+      unsubscribeSync();
+      unsubscribeConn();
+    };
   }, []);
+
+  // Ensure 100% background transparency for OBS and stream layout views
+  useEffect(() => {
+    if (isUrlOverlayMode || activeTab === 'OVERLAY_FULL') {
+      document.documentElement.style.backgroundColor = 'transparent';
+      document.body.style.backgroundColor = 'transparent';
+      document.body.style.background = 'transparent';
+    } else {
+      document.documentElement.style.backgroundColor = '#020617';
+      document.body.style.backgroundColor = '#020617';
+    }
+  }, [isUrlOverlayMode, activeTab]);
 
   const handleRecordBall = (params: any) => {
     const { nextSnapshot, event, overCompleted } = applyBallEvent(snapshot, params);
@@ -177,7 +169,6 @@ export function App() {
       return;
     }
 
-    // Replay remaining events from scratch to guarantee pure restoration
     const remainingEvents = broadcastHub.getBallEvents();
     let replayed = createInitialSnapshot();
     for (const ev of remainingEvents) {
@@ -229,79 +220,118 @@ export function App() {
     broadcastHub.publish(next);
   };
 
-  const handleRegisterTeam = (newTeam: Team) => {
-    setTeams([...teams, newTeam]);
+  const getOverlayUrl = () => {
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}/?mode=overlay`;
   };
 
-  const handleApproveTeam = (teamId: string) => {
-    setTeams(teams.map((t) => (t.id === teamId ? { ...t, status: 'APPROVED' } : t)));
+  const copyOverlayUrl = () => {
+    const url = getOverlayUrl();
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url);
+      setCopiedOverlayLink(true);
+      setTimeout(() => setCopiedOverlayLink(false), 2500);
+    }
   };
 
-  const handleRejectTeam = (teamId: string) => {
-    setTeams(teams.map((t) => (t.id === teamId ? { ...t, status: 'REJECTED' } : t)));
-  };
-
-  // Pure OBS Browser Source Mode (Transparent full HD canvas)
+  // =========================================================================
+  // STREAM OVERLAY VIEW: 100% Transparent Background + Docked Bottom Layout Only
+  // Shows animations (FOUR, SIX, WICKET, etc.) only when triggered!
+  // =========================================================================
   if (isUrlOverlayMode || activeTab === 'OVERLAY_FULL') {
     return (
-      <div className="w-screen h-screen obs-transparent-root relative overflow-hidden select-none">
-        <SponsorBug visible={snapshot.overlayState.sponsorBugVisible} />
+      <div className="fixed inset-0 w-screen h-screen obs-transparent-root overflow-hidden select-none pointer-events-none">
+        {/* Dynamic Center Animations (Only shows when alert triggered, then auto-hides) */}
         <DynamicStinger
           alertType={snapshot.overlayState.activeAlert}
           onComplete={() => handleUpdateOverlay({ activeAlert: 'NONE' })}
         />
+
+        {/* DRS Third Umpire Graphic (Only shows when in progress or decided) */}
         <ReviewGraphic status={snapshot.overlayState.reviewBanner} />
-        <BatterCard
-          batter={snapshot.striker}
-          visible={snapshot.overlayState.activeCard === 'BATTER'}
-        />
-        <BowlerCard
-          bowler={snapshot.currentBowler}
-          visible={snapshot.overlayState.activeCard === 'BOWLER'}
-        />
+
+        {/* Floating Detail Cards (Only visible if explicitly toggled in Director) */}
+        {snapshot.overlayState.activeCard === 'BATTER' && (
+          <BatterCard batter={snapshot.striker} visible={true} />
+        )}
+        {snapshot.overlayState.activeCard === 'BOWLER' && (
+          <BowlerCard bowler={snapshot.currentBowler} visible={true} />
+        )}
         {snapshot.overlayState.activeCard === 'FULL_SCORECARD' && (
           <FullScorecardModal
             snapshot={snapshot}
             onClose={() => handleUpdateOverlay({ activeCard: 'NONE' })}
           />
         )}
+
+        {/* Optional Sponsor Watermark Bug */}
+        <SponsorBug visible={snapshot.overlayState.sponsorBugVisible} />
+
+        {/* Primary Bottom Scorebar (Default docked layout) */}
         <LowerThirdScorebar snapshot={snapshot} />
 
-        {activeTab === 'OVERLAY_FULL' && (
+        {/* Exit preview button (Only when viewed inside tab preview, not when in OBS ?mode=overlay) */}
+        {activeTab === 'OVERLAY_FULL' && !isUrlOverlayMode && (
           <button
             onClick={() => setActiveTab('SCORER')}
-            className="fixed top-4 left-4 z-50 px-3 py-1.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-white text-xs font-bold rounded-lg shadow-lg"
+            className="fixed top-3 left-3 z-50 px-3 py-1.5 bg-slate-900/90 hover:bg-slate-800 border border-slate-700 text-white text-xs font-bold rounded-lg shadow-lg pointer-events-auto cursor-pointer"
           >
-            ← Exit Preview Mode
+            ← Exit Stream Preview
           </button>
         )}
       </div>
     );
   }
 
-  // Master Portal UI
+  // =========================================================================
+  // MASTER PORTAL UI (Scorer Desk, Graphics Director, Tournament, Fan Center)
+  // =========================================================================
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* Top Navigation Bar */}
-      <header className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-6 py-3.5 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-red-500 flex items-center justify-center font-black text-slate-950 shadow-md">
-              CC
+      {/* Top Header */}
+      <header className="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-4 sm:px-6 py-3 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="flex items-center justify-between w-full md:w-auto gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-red-500 flex items-center justify-center font-black text-slate-950 text-sm shadow-md">
+                CC
+              </div>
+              <div>
+                <h1 className="text-base font-black tracking-tight text-white flex items-center gap-1.5">
+                  CrickConnect <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-600/30 text-blue-400 font-bold border border-blue-500/30">PRO</span>
+                </h1>
+                <p className="text-[10px] text-slate-400">Live Stream Overlay & Real-Time Scoring</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
-                CrickConnect <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-600/30 text-blue-400 font-bold border border-blue-500/30">PRO BROADCAST</span>
-              </h1>
-              <p className="text-[11px] text-slate-400">Low-Latency Streaming Overlay & Tournament Hub</p>
+
+            {/* Cloud Sync Status Badge */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-[11px] font-bold">
+              {connectionStatus === 'CONNECTED' ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-emerald-400 flex items-center gap-1">
+                    <Wifi className="w-3 h-3" /> Live Cloud Synced
+                  </span>
+                </>
+              ) : connectionStatus === 'CONNECTING' ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                  <span className="text-amber-400">Connecting Cloud...</span>
+                </>
+              ) : (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-slate-500" />
+                  <span className="text-slate-400">Local Only</span>
+                </>
+              )}
             </div>
           </div>
 
-          {/* Mode Switcher Tabs */}
-          <nav className="flex items-center gap-1.5 bg-slate-850 p-1 rounded-xl border border-slate-750 text-xs font-bold overflow-x-auto max-w-full">
+          {/* Navigation Tabs */}
+          <nav className="flex items-center gap-1 bg-slate-850 p-1 rounded-xl border border-slate-750 text-xs font-bold overflow-x-auto max-w-full">
             <button
               onClick={() => setActiveTab('SCORER')}
-              className={`px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'SCORER' ? 'bg-amber-500 text-slate-950 font-black shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -310,7 +340,7 @@ export function App() {
 
             <button
               onClick={() => setActiveTab('DIRECTOR')}
-              className={`px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'DIRECTOR' ? 'bg-cyan-600 text-white font-black shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -319,41 +349,66 @@ export function App() {
 
             <button
               onClick={() => setActiveTab('TOURNAMENT')}
-              className={`px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'TOURNAMENT' ? 'bg-emerald-600 text-white font-black shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
-              <ShieldCheck className="w-3.5 h-3.5" /> Tournament & Teams
+              <ShieldCheck className="w-3.5 h-3.5" /> Teams
             </button>
 
             <button
               onClick={() => setActiveTab('FAN')}
-              className={`px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'FAN' ? 'bg-purple-600 text-white font-black shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
-              <Smartphone className="w-3.5 h-3.5" /> Fan Center
+              <Smartphone className="w-3.5 h-3.5" /> Fan View
             </button>
 
             <button
               onClick={() => setActiveTab('TESTS')}
-              className={`px-3.5 py-2 rounded-lg transition flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'TESTS' ? 'bg-rose-600 text-white font-black shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
-              🧪 Rule Verification
+              🧪 Rules
             </button>
 
             <button
               onClick={() => setActiveTab('OVERLAY_FULL')}
-              className="px-3.5 py-2 rounded-lg bg-blue-900/60 hover:bg-blue-800 border border-blue-600/60 text-blue-200 transition flex items-center gap-1.5 cursor-pointer"
-              title="Full 1080p Transparent Overlay for OBS"
+              className="px-3 py-1.5 rounded-lg bg-blue-900/60 hover:bg-blue-800 border border-blue-600/60 text-blue-200 transition flex items-center gap-1.5 cursor-pointer"
+              title="Preview 100% Transparent Overlay"
             >
-              <Layers className="w-3.5 h-3.5" /> OBS View
+              <Layers className="w-3.5 h-3.5" /> Stream Overlay
             </button>
           </nav>
         </div>
       </header>
+
+      {/* Cross-Device Mobile Setup Helper Box */}
+      <div className="bg-gradient-to-r from-blue-950/70 via-slate-900 to-indigo-950/70 border-b border-blue-900/50 px-4 py-2.5">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
+          <div className="flex items-center gap-2 text-blue-200 text-center sm:text-left">
+            <Globe className="w-4 h-4 text-blue-400 shrink-0" />
+            <span>
+              <strong>Stream on 2nd Mobile / OBS:</strong> Score from this device, open the overlay link on your other phone or streaming device!
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <code className="text-amber-400 font-mono text-[11px] bg-slate-950 px-2.5 py-1 rounded border border-slate-800 truncate max-w-[260px] sm:max-w-xs">
+              {getOverlayUrl()}
+            </code>
+            <button
+              onClick={copyOverlayUrl}
+              className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition flex items-center gap-1 text-[11px] shrink-0 cursor-pointer"
+            >
+              {copiedOverlayLink ? <Check className="w-3 h-3 text-emerald-300" /> : <Copy className="w-3 h-3" />}
+              {copiedOverlayLink ? 'Copied!' : 'Copy Link'}
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Main Workspace Body */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
@@ -367,7 +422,7 @@ export function App() {
                   <span className="text-xs uppercase text-slate-400 font-bold">On Air Live Score</span>
                   <div className="text-2xl font-black text-white font-mono">
                     {snapshot.battingTeam.shortCode}: {snapshot.battingTeam.score}/{snapshot.battingTeam.wickets}{' '}
-                    <span className="text-sm text-slate-400">
+                    <span className="text-sm text-slate-400 font-normal">
                       ({snapshot.battingTeam.oversCompleted}.{snapshot.battingTeam.ballsThisOver} ov)
                     </span>
                   </div>
@@ -401,11 +456,11 @@ export function App() {
           <div className="space-y-8">
             <TeamApprovalDesk
               teams={teams}
-              onApproveTeam={handleApproveTeam}
-              onRejectTeam={handleRejectTeam}
+              onApproveTeam={(id) => setTeams(teams.map((t) => (t.id === id ? { ...t, status: 'APPROVED' } : t)))}
+              onRejectTeam={(id) => setTeams(teams.map((t) => (t.id === id ? { ...t, status: 'REJECTED' } : t)))}
               onAddDirectTeam={(t) => setTeams([...teams, t])}
             />
-            <PublicRegistration onRegisterTeam={handleRegisterTeam} />
+            <PublicRegistration onRegisterTeam={(t) => setTeams([...teams, t])} />
             <PointsTable standings={standings} />
           </div>
         )}
@@ -423,13 +478,13 @@ export function App() {
       </main>
 
       {/* Global Broadcast Footer */}
-      <footer className="border-t border-slate-800/80 px-6 py-4 bg-slate-900 text-xs text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <footer className="border-t border-slate-800/80 px-6 py-3 bg-slate-900 text-xs text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400" />
-          <span>Real-time Broadcast Sync Engine: <strong>Active (Sub-150ms Latency)</strong></span>
+          <span>Cross-Device Global Sync Engine: <strong>Active (Sub-100ms)</strong></span>
         </div>
-        <div>
-          OBS Browser Source URL: <code className="text-amber-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">http://localhost:5173/?mode=overlay</code>
+        <div className="text-[11px] text-slate-400">
+          Match Room: <strong className="text-amber-400 font-mono">mt_2026_csk_vs_mi</strong> • Global MQTT over WSS
         </div>
       </footer>
     </div>

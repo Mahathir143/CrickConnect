@@ -97,7 +97,7 @@ export function createInitialSnapshot(): LiveMatchSnapshot {
       activeCard: 'NONE',
       activeAlert: 'NONE',
       reviewBanner: 'NONE',
-      sponsorBugVisible: true,
+      sponsorBugVisible: false,
       theme: 'neon',
     },
   };

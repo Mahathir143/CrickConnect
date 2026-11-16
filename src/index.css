@@ -6,15 +6,28 @@
     --card-dark: #121826;
     --border-dark: #1f2937;
   }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100%;
+    background-color: transparent;
+  }
 }
 
-/* Zero-margin transparent background for OBS Studio Browser Source */
+/* Zero-margin 100% transparent root for OBS and Stream Overlays */
 .obs-transparent-root {
-  background-color: transparent !important;
   background: transparent !important;
+  background-color: transparent !important;
   margin: 0 !important;
   padding: 0 !important;
   overflow: hidden !important;
+  pointer-events: none;
+}
+
+.obs-interactive {
+  pointer-events: auto;
 }
 
 /* Animations for broadcast graphics */
