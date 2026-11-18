@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrickConnect - Broadcaster & Operator User Manual</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --card-border: #1f293d;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --code-bg: #0f172a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 2rem;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header { border-bottom: 1px solid var(--card-border); padding-bottom: 2rem; margin-bottom: 2.5rem; }
+    .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; }
+    .badge-primary { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); border: 1px solid var(--accent-blue); }
+    h1 { font-size: 2.4rem; font-weight: 800; background: linear-gradient(to right, #60a5fa, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    h2 { font-size: 1.7rem; margin: 2rem 0 1rem 0; color: #93c5fd; border-left: 4px solid var(--accent-blue); padding-left: 0.75rem; }
+    h3 { font-size: 1.25rem; margin: 1.5rem 0 0.75rem 0; color: #e2e8f0; }
+    p { margin-bottom: 1rem; color: var(--text-muted); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin: 1.5rem 0; }
+    .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.5rem; }
+    .card h4 { color: #38bdf8; margin-bottom: 0.5rem; font-size: 1.1rem; }
+    .step-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin: 1rem 0;
+      position: relative;
+    }
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: var(--accent-blue);
+      color: white;
+      border-radius: 50%;
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-right: 0.5rem;
+    }
+    .highlight-box {
+      background: rgba(16, 185, 129, 0.1);
+      border-left: 4px solid var(--accent-emerald);
+      padding: 1rem 1.25rem;
+      border-radius: 0 8px 8px 0;
+      margin: 1.5rem 0;
+    }
+    .highlight-box p { color: #d1fae5; margin: 0; }
+    code, pre { font-family: "JetBrains Mono", Consolas, Monaco, monospace; }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--card-border);
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 1rem 0;
+      color: #e2e8f0;
+      font-size: 0.88rem;
+    }
+    footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--card-border); color: #6b7280; font-size: 0.85rem; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <span class="badge badge-primary">Operator & User Operations Guide</span>
+      <h1>CrickConnect: End-to-End User & Broadcaster Manual</h1>
+      <p>Operational instructions for OBS Studio setup, CricScorer-inspired management controller, TV channel branding, and multi-device live streaming.</p>
+    </header>
+
+    <section>
+      <h2>1. OBS Studio & Prism Live Studio Integration</h2>
+      <p>Follow these steps to integrate the real-time CrickConnect scoreboard overlay into your broadcast software:</p>
+
+      <div class="step-box">
+        <h4><span class="step-num">1</span> Add Browser Source in OBS</h4>
+        <p>In OBS Studio, open your Scene. In the <strong>Sources</strong> dock, click <strong>+ (Add)</strong> and select <strong>Browser</strong>. Name it <code>CrickConnect_Overlay</code>.</p>
+      </div>
+
+      <div class="step-box">
+        <h4><span class="step-num">2</span> Enter Transparent Overlay URL & Settings</h4>
+        <p>Enter your live Vercel overlay URL or local URL:</p>
+        <pre>https://your-app.vercel.app/?mode=overlay</pre>
+        <ul>
+          <li><strong>Width</strong>: <code>1920</code> (or <code>1080</code> for vertical 9:16 mobile live streams)</li>
+          <li><strong>Height</strong>: <code>1080</code> (or <code>1920</code> for vertical streams)</li>
+          <li><strong>FPS</strong>: <code>60</code></li>
+          <li><strong>Custom CSS</strong>: Leave blank (the app automatically sets 100% transparent alpha everywhere).</li>
+          <li><strong>Shutdown source when not visible</strong>: <em>Disabled (unchecked)</em> to ensure instantaneous live re-sync.</li>
+        </ul>
+      </div>
+
+      <div class="highlight-box">
+        <p><strong>100% Alpha Channel Transparency:</strong> The overlay background is completely transparent. Only the docked bottom scorebar, top-right TV channel logo, and active center popups or celebratory stingers appear on screen.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>2. CricScorer Management Controller Guide</h2>
+      <p>Inspired by the popular CricScorer professional broadcast controller, the desk is organized into clear operational tiers:</p>
+
+      <div class="grid">
+        <div class="card">
+          <h4>Match Header & Chase Equation</h4>
+          <p>Displays live scores for Batters, Bowler, Score, Boundaries (Fours & Sixes), Target, and exact chase formula (e.g. <em>NEED 112 RUNS FROM 83 BALLS</em>).</p>
+        </div>
+        <div class="card">
+          <h4>Circular Ball Grid & Checkbox Extras</h4>
+          <p>Circular buttons: <code>(0)</code>, <code>(1)</code>, <code>(2)</code>, <code>(3)</code>, <code>1D</code>, <code>(4)</code>, <code>(5)</code>, <code>(6)</code>, <code>(?)</code>. Checkboxes for Wide, No Ball, Byes, Leg Byes, and Wicket.</p>
+        </div>
+        <div class="card">
+          <h4>Wicket Fall Dropdown (8 Dismissal Modes)</h4>
+          <p>Bowled, Catch out (ICC 2022 strike rules), Run out at striker end, Run out at non-striker end, Stumping, LBW, Hit wicket, and Mankad (ball does not count).</p>
+        </div>
+        <div class="card">
+          <h4>Emergency Match Adjustments</h4>
+          <p>Direct override inputs with <strong>SAVE</strong> buttons to correct Inning 1 Runs, Wickets, Overs (balls), and Inning 2 figures on the fly.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>3. Broadcast Layout Rules: Scoreboard & Popups</h2>
+      
+      <div class="step-box">
+        <h4>Showing or Removing the Bottom Scoreboard</h4>
+        <p>Click the <strong>Bottom Scoreboard: ENABLED / REMOVED</strong> toggle button in the Score Controller bar.</p>
+        <ul>
+          <li><strong>If ENABLED:</strong> The bottom scorebar remains visible at all times, even when popups, cards, or animations appear on screen.</li>
+          <li><strong>If REMOVED:</strong> The bottom scoreboard is completely hidden from the broadcast feed.</li>
+        </ul>
+      </div>
+
+      <div class="step-box">
+        <h4>Mutual Exclusivity for Popup Cards</h4>
+        <p>When you click <strong>B1</strong>, <strong>B2</strong>, <strong>BOWLER</strong>, <strong>TARGET</strong>, <strong>SUMMARY</strong>, <strong>FOW</strong>, <strong>PARTNERSHIP</strong>, or <strong>Display Input</strong> (Custom Banner):</p>
+        <ul>
+          <li>Only the chosen popup is displayed in the center/lower third of the screen.</li>
+          <li>All other popups are automatically hidden to prevent broadcast clutter.</li>
+          <li>The bottom scoreboard remains visible (if enabled).</li>
+          <li>Click <strong>DEFAULT</strong> or <strong>STOP</strong> at any time to close all popups.</li>
+        </ul>
+      </div>
+
+      <div class="step-box">
+        <h4>Top-Right TV Channel Logo</h4>
+        <p>Click <strong>Edit Channel Name</strong> in the controller to customize your station name (e.g. <code>CRICKCONNECT TV</code>) and subtext (<code>LIVE HD</code>). It displays in the top-right corner with a live pulsing red beacon.</p>
+      </div>
+    </section>
+
+    <footer>
+      CrickConnect Operational Guide &bull; Designed for Professional Live Streaming.
+    </footer>
+  </div>
+</body>
+</html>

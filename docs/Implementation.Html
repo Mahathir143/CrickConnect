@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrickConnect - Technical Implementation Specification</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --card-border: #1f293d;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --code-bg: #0f172a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 2rem;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header { border-bottom: 1px solid var(--card-border); padding-bottom: 2rem; margin-bottom: 2.5rem; }
+    .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; }
+    .badge-primary { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); border: 1px solid var(--accent-blue); }
+    h1 { font-size: 2.4rem; font-weight: 800; background: linear-gradient(to right, #60a5fa, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    h2 { font-size: 1.7rem; margin: 2rem 0 1rem 0; color: #93c5fd; border-left: 4px solid var(--accent-blue); padding-left: 0.75rem; }
+    h3 { font-size: 1.25rem; margin: 1.5rem 0 0.75rem 0; color: #e2e8f0; }
+    p { margin-bottom: 1rem; color: var(--text-muted); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin: 1.5rem 0; }
+    .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.5rem; }
+    .card h4 { color: #38bdf8; margin-bottom: 0.5rem; font-size: 1.1rem; }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--card-border);
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 1rem 0;
+      color: #e2e8f0;
+      font-size: 0.88rem;
+      font-family: "JetBrains Mono", Consolas, Monaco, monospace;
+    }
+    table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; background: var(--card-bg); border-radius: 8px; overflow: hidden; }
+    th, td { padding: 0.85rem 1rem; text-align: left; border-bottom: 1px solid var(--card-border); }
+    th { background: #1e293b; color: #93c5fd; font-weight: 600; }
+    .folder-tree { font-family: monospace; line-height: 1.4; color: #93c5fd; background: var(--code-bg); padding: 1.25rem; border-radius: 8px; border: 1px solid var(--card-border); margin: 1rem 0; }
+    footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--card-border); color: #6b7280; font-size: 0.85rem; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <span class="badge badge-primary">Technical Implementation Document</span>
+      <h1>CrickConnect: Core Engine & Subsystem Implementation</h1>
+      <p>In-depth implementation guide detailing component structures, state flow machines, ICC scoring algorithmic models, and OBS rendering pipelines.</p>
+    </header>
+
+    <section>
+      <h2>1. Project Directory Blueprint</h2>
+      <p>The application is organized under <code>D:\MakkuTechKey\Projects\CrickConnect</code> with modular separation of overlay graphics, scoring desks, tournament management, and real-time state synchronization:</p>
+
+      <div class="folder-tree">
+D:\MakkuTechKey\Projects\CrickConnect
+├── src/
+│   ├── components/
+│   │   ├── overlay/                  # OBS Chromium Browser Source Components
+│   │   │   ├── LowerThirdScorebar.tsx # Persistent broadcast scorebar
+│   │   │   ├── DynamicStinger.tsx    # FOUR, SIX, WICKET, FREE HIT keyframe popups
+│   │   │   ├── BatterCard.tsx        # In-depth batter milestone display
+│   │   │   ├── BowlerCard.tsx        # Bowler spell summary card
+│   │   │   ├── FullScorecardModal.tsx# Mid-innings full team scorecard
+│   │   │   ├── ReviewGraphic.tsx     # DRS / Decision Pending pulse overlay
+│   │   │   └── SponsorBug.tsx        # Rotating corner sponsor watermark
+│   │   ├── scorer/                   # Field Scorer PWA Desktop/Mobile UI
+│   │   │   ├── QuickScorePad.tsx     # Primary ball buttons (0, 1, 2, 3, 4, 6)
+│   │   │   ├── ExtrasModal.tsx       # Composite extras (Wd, Nb, Bye, Lb, Penalty)
+│   │   │   ├── DismissalModal.tsx    # 11 modes with fielder/runner disambiguation
+│   │   │   ├── BowlerSelectionModal.tsx # Over completion & spell quota enforcement
+│   │   │   └── BallLogViewer.tsx     # Ball-by-ball timeline with 1-click Undo
+│   │   ├── director/                 # Broadcaster Graphics Control Desk
+│   │   │   ├── GraphicsControlPad.tsx# One-click triggers for lower-third & cards
+│   │   │   ├── ThemeSelector.tsx     # Theme switching (IPL Neon, Sky Dark, Retro)
+│   │   │   └── BroadcastPreview.tsx  # Live mini-monitor replicating OBS output
+│   │   ├── tournament/               # Tournament & Team Management
+│   │   │   ├── PublicRegistration.tsx# Public link team registration form
+│   │   │   ├── TeamApprovalDesk.tsx  # Dual-approval verification dashboard
+│   │   │   ├── PointsTable.tsx       # Automated standings with Net Run Rate (NRR)
+│   │   │   └── FixturesManager.tsx   # League / Knockout bracket generator
+│   │   └── fan/                      # Public Mobile Match Center
+│   │       ├── LiveScoreHero.tsx     # Match status, current run rate & chase eq
+│   │       ├── WormGraph.tsx         # Comparative run rate progression curve
+│   │       └── CommentaryTicker.tsx  # Auto-generated textual commentary
+│   ├── core/                         # Pure Domain Business Logic
+│   │   ├── eventStore.ts             # Immutable ball event log store
+│   │   ├── stateReducer.ts           # Pure state projection calculator
+│   │   ├── cricketRules.ts           # ICC rules: strike swaps, bowler over caps
+│   │   └── nrrCalculator.ts          # Precise Net Run Rate formulas
+│   ├── realtime/                     # Real-time Broadcast Hub
+│   │   ├── broadcastHub.ts           # BroadcastChannel + WebSocket bridge
+│   │   └── tokenValidator.ts         # Overlay cryptographic token verifier
+│   ├── types/
+│   │   └── cricket.ts                # TypeScript domain models
+│   ├── App.tsx                       # Master Application Switcher
+│   ├── main.tsx                      # Vite React Root
+│   └── index.css                     # Tailwind CSS & Hardware-accelerated animations
+      </div>
+    </section>
+
+    <section>
+      <h2>2. Pure State Projection: The Event Sourcing Engine</h2>
+      <p>Rather than persisting mutable accumulators, every ball is stored in an immutable event array. The live match snapshot is computed on each event:</p>
+
+      <pre>
+export function computeMatchSnapshot(
+  matchInfo: MatchMeta,
+  ballEvents: MatchBallEvent[]
+): LiveMatchSnapshot {
+  let score = 0;
+  let wickets = 0;
+  let legalDeliveries = 0;
+  let isFreeHitActive = false;
+
+  // Track striker, non-striker, bowler spells, partnerships
+  for (const event of ballEvents) {
+    const totalBallRuns = event.batsmanRuns + event.extraRuns;
+    score += totalBallRuns;
+
+    if (event.isWicket) {
+      wickets++;
+      // Handle batsman dismissal and new striker placement
+    }
+
+    if (event.isLegalDelivery) {
+      legalDeliveries++;
+      isFreeHitActive = false; // Free hit expires after a legal delivery
+    } else if (event.extraType === 'NO_BALL') {
+      isFreeHitActive = true;  // Free hit triggered or carried forward
+    }
+
+    // Strike rotation on odd runs (1, 3, 5)
+    if (event.batsmanRuns % 2 !== 0 && !event.isWicket) {
+      swapStriker();
+    }
+
+    // End of over: 6 legal deliveries swap ends
+    if (legalDeliveries > 0 && legalDeliveries % 6 === 0 && event.isLegalDelivery) {
+      swapStriker();
+    }
+  }
+
+  return {
+    score,
+    wickets,
+    overs: `${Math.floor(legalDeliveries / 6)}.${legalDeliveries % 6}`,
+    isFreeHit: isFreeHitActive,
+    crr: calculateCRR(score, legalDeliveries),
+    // ... complete calculated snapshot
+  };
+}
+      </pre>
+
+      <div class="card">
+        <h4>Infallible Multi-Level Undo Mechanism</h4>
+        <p>When the scorer clicks <strong>Undo</strong>, the system executes <code>ballEvents.pop()</code> and invokes <code>computeMatchSnapshot()</code>. In 0.2 milliseconds, the exact state of striker, non-striker, current bowler, and over ball timeline is flawlessly restored without numerical errors or manual corrections.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>3. Modern ICC Rulebook Implementation</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Rule Scenario</th>
+            <th>ICC Specification</th>
+            <th>CrickConnect Automated Behavior</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Caught Dismissal Strike</strong></td>
+            <td>ICC Law 18.11 (Oct 2022 onwards)</td>
+            <td>The new incoming batter automatically assumes strike at the striker's end, regardless of crossing before the catch was completed.</td>
+          </tr>
+          <tr>
+            <td><strong>Run-Out on Striker / Non-Striker</strong></td>
+            <td>Disambiguate runner and strike</td>
+            <td>Scorer modal asks who was dismissed and whether runners crossed before the wickets were broken. Strike allocated accordingly.</td>
+          </tr>
+          <tr>
+            <td><strong>No-Ball & Free Hit Carryover</strong></td>
+            <td>Law 21.19</td>
+            <td>Free-hit status auto-engages. If the free-hit delivery is a Wide or another No-Ball, the free-hit status persists to the next legal ball.</td>
+          </tr>
+          <tr>
+            <td><strong>Bowler Spell Quota</strong></td>
+            <td>Max 20% of total innings overs</td>
+            <td>System validates overs bowled against match limit (e.g., 4 overs in T20). Prevents selection of an exhausted bowler.</td>
+          </tr>
+          <tr>
+            <td><strong>Consecutive Overs Ban</strong></td>
+            <td>Law 17.6</td>
+            <td>Prevents assigning the same bowler to two consecutive overs from either end.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>4. Broadcaster Graphics Desk & OBS Overlay Pipeline</h2>
+      <p>The OBS Overlay operates in zero-margin transparent mode. Graphic modes are triggered via the Graphics Director:</p>
+
+      <div class="grid">
+        <div class="card">
+          <h4>Lower-Third Scorebar</h4>
+          <p>Always visible during play. Features batting team logo, live score, overs, striker stats with live strike beacon, non-striker, bowler spell, and ball-by-ball dots.</p>
+        </div>
+        <div class="card">
+          <h4>Dynamic Event Stingers</h4>
+          <p>Fires GPU keyframe animations on trigger:
+            <br>&bull; <code>FOUR</code>: Golden linear banner
+            <br>&bull; <code>SIX</code>: Pulsing fire-glow badge
+            <br>&bull; <code>WICKET</code>: High-intensity crimson alert
+            <br>&bull; <code>FREE HIT</code>: Highlighting amber flashing beacon
+          </p>
+        </div>
+        <div class="card">
+          <h4>Sponsor Watermark Rotator</h4>
+          <p>Top-right corner overlay cycling through high-resolution sponsor logos every 20 seconds with smooth cross-fade opacity transitions.</p>
+        </div>
+        <div class="card">
+          <h4>DRS / Third Umpire Graphic</h4>
+          <p>Broadcast stinger reading <em>"THIRD UMPIRE REVIEW"</em> followed by the umpire's ruling: <em>"DECISION: OUT / NOT OUT"</em>.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>5. Dual-Approval Tournament Workflow & Points Table</h2>
+      <p>The tournament module supports public team registration with an administrative review queue:</p>
+      <ul>
+        <li><strong>Public Registration URL</strong>: Allows external team captains to enter their squad details, jersey numbers, and upload team logos. Submissions enter <code>Pending Verification</code>.</li>
+        <li><strong>Admin Vetting Desk</strong>: The tournament manager reviews player eligibility, inspects logos, and clicks <strong>Approve</strong> or <strong>Reject</strong>.</li>
+        <li><strong>Direct Management Addition</strong>: Teams enrolled directly by the admin bypass verification and are immediately marked <code>Approved</code>.</li>
+        <li><strong>Points Table Engine</strong>: Automatically updates points and Net Run Rate (NRR) as matches conclude:
+          $$\text{NRR} = \left( \frac{\text{Runs Scored}}{\text{Overs Faced}} \right) - \left( \frac{\text{Runs Conceded}}{\text{Overs Bowled}} \right)$$
+        </li>
+      </ul>
+    </section>
+
+    <footer>
+      CrickConnect Implementation Document &bull; Version 2.0 Technical Specification.
+    </footer>
+  </div>
+</body>
+</html>

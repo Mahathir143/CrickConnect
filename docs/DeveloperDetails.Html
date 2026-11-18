@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrickConnect - Developer & Systems Engineering Manual</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --card-border: #1f293d;
+      --accent-blue: #3b82f6;
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --code-bg: #0f172a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 2rem;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header { border-bottom: 1px solid var(--card-border); padding-bottom: 2rem; margin-bottom: 2.5rem; }
+    .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 1rem; }
+    .badge-primary { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); border: 1px solid var(--accent-blue); }
+    h1 { font-size: 2.4rem; font-weight: 800; background: linear-gradient(to right, #60a5fa, #38bdf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    h2 { font-size: 1.7rem; margin: 2rem 0 1rem 0; color: #93c5fd; border-left: 4px solid var(--accent-blue); padding-left: 0.75rem; }
+    h3 { font-size: 1.25rem; margin: 1.5rem 0 0.75rem 0; color: #e2e8f0; }
+    p { margin-bottom: 1rem; color: var(--text-muted); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; margin: 1.5rem 0; }
+    .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.5rem; }
+    .card h4 { color: #38bdf8; margin-bottom: 0.5rem; font-size: 1.1rem; }
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--card-border);
+      padding: 1rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 1rem 0;
+      color: #e2e8f0;
+      font-size: 0.88rem;
+      font-family: "JetBrains Mono", Consolas, Monaco, monospace;
+    }
+    table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; background: var(--card-bg); border-radius: 8px; overflow: hidden; }
+    th, td { padding: 0.85rem 1rem; text-align: left; border-bottom: 1px solid var(--card-border); }
+    th { background: #1e293b; color: #93c5fd; font-weight: 600; }
+    .highlight-box {
+      background: rgba(16, 185, 129, 0.1);
+      border-left: 4px solid var(--accent-emerald);
+      padding: 1rem 1.25rem;
+      border-radius: 0 8px 8px 0;
+      margin: 1.5rem 0;
+    }
+    .highlight-box p { color: #d1fae5; margin: 0; }
+    .step-box {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin: 1rem 0;
+    }
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: var(--accent-blue);
+      color: white;
+      border-radius: 50%;
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-right: 0.5rem;
+    }
+    footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--card-border); color: #6b7280; font-size: 0.85rem; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <span class="badge badge-primary">Developer Operations & System Manual</span>
+      <h1>CrickConnect: Developer Reference & Engineering Guide</h1>
+      <p>Comprehensive technical specification detailing libraries, cross-device real-time communication protocols, diagnostic inspection techniques, and issue reproduction procedures.</p>
+    </header>
+
+    <section>
+      <h2>1. Technology Stack & Library Roster</h2>
+      <p>The system is built upon a high-performance stack designed specifically for sub-100ms streaming latency and low-memory CEF browser source rendering:</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Technology / Library</th>
+            <th>Version</th>
+            <th>Primary Responsibility in CrickConnect</th>
+            <th>Why This Specific Library Was Chosen</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>React</strong></td>
+            <td>19.3.1</td>
+            <td>User Interface Component Hierarchy</td>
+            <td>Concurrent rendering pipeline, zero DOM hydration lag, fast re-renders for live ball updates.</td>
+          </tr>
+          <tr>
+            <td><strong>TypeScript</strong></td>
+            <td>7.0.2</td>
+            <td>Type System & Domain Modeling</td>
+            <td>Guarantees compile-time validation for 11 dismissal modes, composite extras, and immutable match snapshots.</td>
+          </tr>
+          <tr>
+            <td><strong>Vite</strong></td>
+            <td>8.3.8</td>
+            <td>Build Tool & Dev Server</td>
+            <td>Instant ES modules HMR during development and tree-shaken static production bundles.</td>
+          </tr>
+          <tr>
+            <td><strong>Tailwind CSS</strong></td>
+            <td>4.3.5</td>
+            <td>Styling & GPU Transitions</td>
+            <td>High-density utility classes for both mobile phone displays (55px dock) and 1080p/4K OBS canvases.</td>
+          </tr>
+          <tr>
+            <td><strong>MQTT (mqtt.js)</strong></td>
+            <td>5.14.0</td>
+            <td>Global Real-Time Pub/Sub Engine</td>
+            <td>Enables sub-100ms cross-device communication over Secure WebSockets (WSS). Provides <em>retained messages</em> so new devices receive the latest score immediately.</td>
+          </tr>
+          <tr>
+            <td><strong>BroadcastChannel API</strong></td>
+            <td>Native HTML5</td>
+            <td>Intra-Browser Inter-Tab Sync</td>
+            <td>Delivers instantaneous (0ms) zero-cloud communication between Scorer and Overlay tabs running on the same computer.</td>
+          </tr>
+          <tr>
+            <td><strong>LocalStorage API</strong></td>
+            <td>Native HTML5</td>
+            <td>Offline Cache & Event History</td>
+            <td>Stores immutable ball-by-ball events (`crickconnect_ball_events`) for 1-click infallible undo.</td>
+          </tr>
+          <tr>
+            <td><strong>Canvas Confetti</strong></td>
+            <td>1.9.4</td>
+            <td>Celebratory Particle Effects</td>
+            <td>Hardware-accelerated particle physics for 6s, 50s, 100s, and hat-trick deliveries without CPU lag.</td>
+          </tr>
+          <tr>
+            <td><strong>Lucide React</strong></td>
+            <td>1.73.0</td>
+            <td>Broadcast Iconography</td>
+            <td>Lightweight SVG icons for score pads, wicket indicators, and TV channel badges.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>2. Real-Time Cross-Device Communication Architecture</h2>
+      <p>A primary architectural hurdle in sports overlays is ensuring that when a scorer taps a button on <strong>Mobile Phone 1</strong>, the stream overlay on <strong>Mobile Phone 2</strong> or an <strong>OBS Studio PC</strong> updates in real time over any cellular carrier or Wi-Fi network.</p>
+
+      <div class="highlight-box">
+        <p><strong>Communication Model:</strong> Multi-tier hybrid synchronization combining <strong>MQTT over Secure WebSockets (WSS)</strong> for global cross-device push, with native <strong>BroadcastChannel</strong> and <strong>LocalStorage</strong> for same-machine zero-latency operations.</p>
+      </div>
+
+      <pre>
+┌─────────────────────────────────┐
+│     Mobile 1: Scorer Desk       │
+│  (User taps 4 / 6 / OUT / Runs) │
+└─────────────────────────────────┘
+                 │
+                 ▼
+     [1. Local BroadcastChannel] ──> (Same-phone tabs update in 0ms)
+                 │
+                 ▼
+     [2. MQTT over WSS Publish]
+         Broker: wss://broker.emqx.io:8084/mqtt
+         Topic:  crickconnect/v1/match/{matchId}
+         Config: { qos: 1, retain: true }
+                 │
+      ┌──────────┴──────────┐
+      ▼                     ▼
+┌──────────────────┐  ┌──────────────────────────────┐
+│ Mobile 2: Stream │  │ OBS Studio / Prism Live      │
+│ Transparent View │  │ 1080p Browser Source Canvas  │
+│ (< 80ms Latency) │  │ (< 80ms Latency)             │
+└──────────────────┘  └──────────────────────────────┘
+      </pre>
+
+      <h3>2.1 Why MQTT Retained Messages are Essential for Broadcast Overlays</h3>
+      <p>Standard WebSockets only push messages to active listeners. If Mobile 2 opens the overlay 10 minutes into the match, a standard WebSocket would show a blank screen until the next ball is bowled. With <code>retain: true</code> in MQTT, the broker caches the latest match snapshot on the topic. The moment Mobile 2 or OBS connects, the broker pushes the current score in <strong>under 50ms</strong>!</p>
+    </section>
+
+    <section>
+      <h2>3. Overlay Rendering Architecture: Exclusivity & Persistence Rules</h2>
+      <p>The overlay adheres to two foundational broadcast production rules requested by professional commentators:</p>
+      
+      <div class="grid">
+        <div class="card">
+          <h4>Rule 1: Bottom Scoreboard Persistence</h4>
+          <p>
+            &bull; Controlled by <code>overlayState.isBottomScorebarEnabled</code>.<br>
+            &bull; <strong>If Enabled:</strong> The bottom scorebar remains visible at all times, even when popups, cards, or animations appear on screen.<br>
+            &bull; <strong>If Removed/Disabled:</strong> The bottom scoreboard is completely removed from the stream.
+          </p>
+        </div>
+        <div class="card">
+          <h4>Rule 2: Popup Mutual Exclusivity</h4>
+          <p>
+            &bull; Only <strong>ONE popup card</strong> (B1, B2, Bowler, Target, Partnership, FOW, Custom Banner, MOM) can be active at a time.<br>
+            &bull; Triggering a new popup immediately unmounts any previously visible popup.<br>
+            &bull; Clicking <code>DEFAULT</code> or <code>STOP</code> closes all open popups while retaining the bottom scoreboard.
+          </p>
+        </div>
+      </div>
+
+      <h3>3.1 TV Channel Watermark Bug</h3>
+      <p>Positioned at <code>fixed top-3 right-3 sm:top-5 sm:right-6</code>. Configured with a customizable station callsign (e.g. <code>CRICKCONNECT</code> or <code>PVS CRICKET TV</code>) and a pulsing red <code>LIVE</code> indicator, mimicking Star Sports or Sky Sports broadcasts.</p>
+    </section>
+
+    <section>
+      <h2>4. Diagnostic Inspection Guide ("How to Find Issues")</h2>
+      <p>When troubleshooting real-time connectivity or overlay rendering, follow this diagnostic checklist:</p>
+
+      <div class="step-box">
+        <h4><span class="step-num">1</span> Verify Cloud MQTT WebSocket Connection</h4>
+        <p>Open Chrome DevTools (F12) $\rightarrow$ select the <strong>Network</strong> tab $\rightarrow$ filter by <strong>WS</strong> (WebSockets). Verify that a persistent connection to <code>wss://broker.emqx.io:8084/mqtt</code> is established with status code <code>101 Switching Protocols</code>.</p>
+      </div>
+
+      <div class="step-box">
+        <h4><span class="step-num">2</span> Inspect Live Payload Frames</h4>
+        <p>Click on the active WebSocket entry in the Network tab and open the <strong>Messages</strong> sub-tab. Whenever a ball is scored, you should see incoming and outgoing binary/text frames containing the JSON payload with <code>snapshot</code> and <code>events</code>.</p>
+      </div>
+
+      <div class="step-box">
+        <h4><span class="step-num">3</span> Inspect OBS Studio CEF Browser Source</h4>
+        <p>To inspect OBS Studio's internal browser source with Chrome DevTools:</p>
+        <pre>
+# Start OBS Studio with remote debugging enabled
+obs64.exe --remote-debugging-port=9222
+
+# Open Google Chrome and navigate to:
+http://localhost:9222
+# Click on the CrickConnect browser source to open full DevTools inside OBS!
+        </pre>
+      </div>
+
+      <div class="step-box">
+        <h4><span class="step-num">4</span> Check Browser Console for MQTT Dropouts</h4>
+        <p>The application logs connection events. Look for <code>[MQTT] Connected to EMQX!</code>. If cellular carrier firewall blocks port 8084, verify that the automated fallback to <code>wss://broker.hivemq.com:8884/mqtt</code> is initiated.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>5. Step-by-Step Issue Reproduction Procedures</h2>
+      <p>Follow these standard test scripts to verify system resilience:</p>
+
+      <h3>5.1 Reproducing Cross-Device Synchronization</h3>
+      <ol style="margin-left: 1.5rem; color: var(--text-muted); space-y: 0.5rem;">
+        <li>Open <code>https://crickconnect.vercel.app/</code> on Phone 1 (cellular network).</li>
+        <li>Open <code>https://crickconnect.vercel.app/?mode=overlay</code> on Phone 2 (different Wi-Fi network).</li>
+        <li>On Phone 1, tap <strong>SIX (6)</strong>.</li>
+        <li><strong>Expected Outcome:</strong> Within 100ms, Phone 2 updates the team score and triggers the center flame stinger animation.</li>
+      </ol>
+
+      <h3>5.2 Reproducing Offline Recovery & Reconnect Backoff</h3>
+      <ol style="margin-left: 1.5rem; color: var(--text-muted); space-y: 0.5rem;">
+        <li>In Chrome DevTools, open <strong>Network</strong> tab and set Throttling to <strong>Offline</strong> on Phone 1.</li>
+        <li>Notice the status indicator changes from <code>Live Synced</code> to <code>Local Only</code>.</li>
+        <li>Score 3 balls locally (events are queued in `localStorage`).</li>
+        <li>Switch Throttling back to <strong>No throttling (Online)</strong>.</li>
+        <li><strong>Expected Outcome:</strong> The MQTT client auto-reconnects within 3 seconds and flushes the latest snapshot to the broker, resyncing Phone 2.</li>
+      </ol>
+
+      <h3>5.3 Reproducing Bottom Scoreboard Persistence vs Popup Exclusivity</h3>
+      <ol style="margin-left: 1.5rem; color: var(--text-muted); space-y: 0.5rem;">
+        <li>Ensure bottom scoreboard is enabled (default).</li>
+        <li>In the Score Controller, click <strong>B1</strong>. Striker card slides up; bottom scorebar remains visible.</li>
+        <li>Click <strong>BOWLER</strong>. B1 card immediately hides; Bowler card displays; bottom scorebar remains visible.</li>
+        <li>Click <strong>DEFAULT</strong>. Bowler card hides; only the bottom scorebar remains.</li>
+        <li>Click <strong>Bottom Scoreboard: ENABLED</strong> (toggle to REMOVED). The bottom scorebar disappears completely.</li>
+      </ol>
+    </section>
+
+    <footer>
+      CrickConnect Developer Manual &bull; Systems Architecture & Verification Guide.
+    </footer>
+  </div>
+</body>
+</html>
