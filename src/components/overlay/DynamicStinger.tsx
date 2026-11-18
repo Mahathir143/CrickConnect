@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
-import { Flame, ShieldAlert, Award, Zap } from 'lucide-react';
+import { Flame, ShieldAlert, Award, Zap, Sparkles } from 'lucide-react';
 
 interface StingerProps {
-  alertType: 'NONE' | 'FOUR' | 'SIX' | 'WICKET' | 'FREE_HIT' | 'FIFTY' | 'CENTURY';
+  alertType: 'NONE' | 'FOUR' | 'SIX' | 'WICKET' | 'FREE_HIT' | 'FIFTY' | 'CENTURY' | 'HAT_TRICK';
   onComplete?: () => void;
 }
 
@@ -11,13 +11,13 @@ export const DynamicStinger: React.FC<StingerProps> = ({ alertType, onComplete }
   useEffect(() => {
     if (alertType === 'NONE') return;
 
-    if (alertType === 'SIX' || alertType === 'CENTURY') {
+    if (alertType === 'SIX' || alertType === 'CENTURY' || alertType === 'HAT_TRICK') {
       try {
         confetti({
           particleCount: 80,
           spread: 70,
           origin: { y: 0.6 },
-          colors: ['#f59e0b', '#ef4444', '#3b82f6', '#10b981'],
+          colors: ['#f59e0b', '#ef4444', '#3b82f6', '#10b981', '#ec4899'],
         });
       } catch (e) {
         console.warn('Confetti trigger skipped', e);
@@ -71,6 +71,16 @@ export const DynamicStinger: React.FC<StingerProps> = ({ alertType, onComplete }
           <div>
             <div className="text-4xl sm:text-6xl font-black tracking-tight uppercase">FREE HIT!</div>
             <div className="text-slate-900 text-xs sm:text-lg font-bold uppercase tracking-wider">Next Ball Advantage</div>
+          </div>
+        </div>
+      )}
+
+      {alertType === 'HAT_TRICK' && (
+        <div className="animate-stinger bg-gradient-to-r from-pink-600 via-fuchsia-600 to-rose-700 text-white px-6 py-4 sm:px-14 sm:py-7 rounded-2xl border-4 border-pink-300 shadow-[0_0_100px_rgba(236,72,153,1)] flex items-center gap-3 sm:gap-5 max-w-sm sm:max-w-none">
+          <Sparkles className="w-12 h-12 sm:w-20 sm:h-20 text-yellow-200 animate-spin shrink-0" />
+          <div>
+            <div className="text-3xl sm:text-6xl font-black uppercase tracking-tight">HAT-TRICK BALL!</div>
+            <div className="text-pink-100 text-xs sm:text-lg font-semibold tracking-wider uppercase">3 Wickets in 3 Deliveries</div>
           </div>
         </div>
       )}

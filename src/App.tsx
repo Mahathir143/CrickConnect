@@ -1,15 +1,14 @@
 import { useState, useEffect } from 'react';
 import { LiveMatchSnapshot, MatchBallEvent, Team, TournamentStanding } from './types/cricket';
-import { createInitialSnapshot, applyBallEvent } from './core/cricketRules';
+import { createInitialSnapshot, applyBallEvent, applyEmergencyAdjustment } from './core/cricketRules';
 import { broadcastHub } from './realtime/broadcastHub';
 import { LowerThirdScorebar } from './components/overlay/LowerThirdScorebar';
 import { DynamicStinger } from './components/overlay/DynamicStinger';
-import { BatterCard } from './components/overlay/BatterCard';
-import { BowlerCard } from './components/overlay/BowlerCard';
 import { ReviewGraphic } from './components/overlay/ReviewGraphic';
 import { SponsorBug } from './components/overlay/SponsorBug';
-import { FullScorecardModal } from './components/overlay/FullScorecardModal';
-import { QuickScorePad } from './components/scorer/QuickScorePad';
+import { TvChannelLogo } from './components/overlay/TvChannelLogo';
+import { OverlayPopups } from './components/overlay/OverlayPopups';
+import { CricScorerManagementPad } from './components/scorer/CricScorerManagementPad';
 import { GraphicsControlPad } from './components/director/GraphicsControlPad';
 import { PublicRegistration } from './components/tournament/PublicRegistration';
 import { TeamApprovalDesk } from './components/tournament/TeamApprovalDesk';
@@ -144,13 +143,16 @@ export function App() {
   const handleRecordBall = (params: any) => {
     const { nextSnapshot, event, overCompleted } = applyBallEvent(snapshot, params);
     
-    // Auto-fire animation stingers on boundaries or wickets
-    if (params.batsmanRuns === 4) {
-      nextSnapshot.overlayState.activeAlert = 'FOUR';
-    } else if (params.batsmanRuns === 6) {
-      nextSnapshot.overlayState.activeAlert = 'SIX';
-    } else if (params.isWicket) {
-      nextSnapshot.overlayState.activeAlert = 'WICKET';
+    // Auto-fire animation stingers on boundaries or wickets if autoAnimationEnabled is true
+    const autoAnim = nextSnapshot.overlayState?.autoAnimationEnabled ?? true;
+    if (autoAnim) {
+      if (params.batsmanRuns === 4) {
+        nextSnapshot.overlayState.activeAlert = 'FOUR';
+      } else if (params.batsmanRuns === 6) {
+        nextSnapshot.overlayState.activeAlert = 'SIX';
+      } else if (params.isWicket) {
+        nextSnapshot.overlayState.activeAlert = 'WICKET';
+      }
     }
 
     setSnapshot(nextSnapshot);
@@ -197,6 +199,25 @@ export function App() {
     broadcastHub.publish(next);
   };
 
+  const handleRetireBatter = () => {
+    const next: LiveMatchSnapshot = JSON.parse(JSON.stringify(snapshot));
+    const retiredName = next.striker.name;
+    const replacement = prompt(`Enter replacement batter for retired batter (${retiredName}):`, `Batter #${next.battingTeam.wickets + 2}`);
+    if (replacement && replacement.trim()) {
+      next.striker = {
+        id: `pl_${Date.now()}`,
+        name: replacement.trim(),
+        runs: 0,
+        balls: 0,
+        fours: 0,
+        sixes: 0,
+        isOut: false,
+      };
+      setSnapshot(next);
+      broadcastHub.publish(next);
+    }
+  };
+
   const handleSelectBowler = (bowlerName: string) => {
     const next: LiveMatchSnapshot = JSON.parse(JSON.stringify(snapshot));
     next.currentBowler = {
@@ -220,6 +241,12 @@ export function App() {
     broadcastHub.publish(next);
   };
 
+  const handleEmergencyAdjust = (adjustments: any) => {
+    const next = applyEmergencyAdjustment(snapshot, adjustments);
+    setSnapshot(next);
+    broadcastHub.publish(next);
+  };
+
   const getOverlayUrl = () => {
     if (typeof window === 'undefined') return '';
     return `${window.location.origin}/?mode=overlay`;
@@ -235,42 +262,46 @@ export function App() {
   };
 
   // =========================================================================
-  // STREAM OVERLAY VIEW: 100% Transparent Background + Docked Bottom Layout Only
-  // Shows animations (FOUR, SIX, WICKET, etc.) only when triggered!
+  // STREAM OVERLAY VIEW:
+  // - 100% Transparent Background Everywhere!
+  // - Top-Right TV Channel Logo (Like TV Channels)
+  // - Bottom Scoreboard: If enabled, stays visible EVEN when popups/animations show!
+  //   If removed/disabled, does not show!
+  // - Popups & Animations: Only the active popup/animation shows (mutually exclusive)
   // =========================================================================
   if (isUrlOverlayMode || activeTab === 'OVERLAY_FULL') {
     return (
       <div className="fixed inset-0 w-screen h-screen obs-transparent-root overflow-hidden select-none pointer-events-none">
-        {/* Dynamic Center Animations (Only shows when alert triggered, then auto-hides) */}
+        {/* Top-Right TV Channel Logo (Like Star Sports / Sky Sports) */}
+        <TvChannelLogo tvLogo={snapshot.overlayState.tvLogo} />
+
+        {/* Dynamic Center Animations (FOUR, SIX, WICKET, FREE HIT, FIFTY, etc.) */}
         <DynamicStinger
           alertType={snapshot.overlayState.activeAlert}
           onComplete={() => handleUpdateOverlay({ activeAlert: 'NONE' })}
         />
 
-        {/* DRS Third Umpire Graphic (Only shows when in progress or decided) */}
+        {/* DRS Third Umpire Graphic */}
         <ReviewGraphic status={snapshot.overlayState.reviewBanner} />
 
-        {/* Floating Detail Cards (Only visible if explicitly toggled in Director) */}
-        {snapshot.overlayState.activeCard === 'BATTER' && (
-          <BatterCard batter={snapshot.striker} visible={true} />
-        )}
-        {snapshot.overlayState.activeCard === 'BOWLER' && (
-          <BowlerCard bowler={snapshot.currentBowler} visible={true} />
-        )}
-        {snapshot.overlayState.activeCard === 'FULL_SCORECARD' && (
-          <FullScorecardModal
-            snapshot={snapshot}
-            onClose={() => handleUpdateOverlay({ activeCard: 'NONE' })}
-          />
-        )}
+        {/* Mutually Exclusive Popups (B1, B2, Bowler, Target, Partnership, FOW, Custom Text, etc.) */}
+        <OverlayPopups
+          snapshot={snapshot}
+          onClose={() => handleUpdateOverlay({ activePopup: 'NONE' })}
+        />
 
         {/* Optional Sponsor Watermark Bug */}
-        <SponsorBug visible={snapshot.overlayState.sponsorBugVisible} />
+        {snapshot.overlayState.sponsorBugVisible && (
+          <SponsorBug visible={true} />
+        )}
 
-        {/* Primary Bottom Scorebar (Default docked layout) */}
+        {/* Primary Bottom Scorebar:
+            - If enabled: Never hides when other popups show!
+            - If disabled/removed: Does not show!
+        */}
         <LowerThirdScorebar snapshot={snapshot} />
 
-        {/* Exit preview button (Only when viewed inside tab preview, not when in OBS ?mode=overlay) */}
+        {/* Exit preview button (Only when inside app tab preview, not when in OBS ?mode=overlay) */}
         {activeTab === 'OVERLAY_FULL' && !isUrlOverlayMode && (
           <button
             onClick={() => setActiveTab('SCORER')}
@@ -300,7 +331,7 @@ export function App() {
                 <h1 className="text-base font-black tracking-tight text-white flex items-center gap-1.5">
                   CrickConnect <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-600/30 text-blue-400 font-bold border border-blue-500/30">PRO</span>
                 </h1>
-                <p className="text-[10px] text-slate-400">Live Stream Overlay & Real-Time Scoring</p>
+                <p className="text-[10px] text-slate-400">Matchday Management & Broadcast Control Hub</p>
               </div>
             </div>
 
@@ -310,7 +341,7 @@ export function App() {
                 <>
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   <span className="text-emerald-400 flex items-center gap-1">
-                    <Wifi className="w-3 h-3" /> Live Cloud Synced
+                    <Wifi className="w-3 h-3" /> Live Synced
                   </span>
                 </>
               ) : connectionStatus === 'CONNECTING' ? (
@@ -353,7 +384,7 @@ export function App() {
                 activeTab === 'TOURNAMENT' ? 'bg-emerald-600 text-white font-black shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
-              <ShieldCheck className="w-3.5 h-3.5" /> Teams
+              <ShieldCheck className="w-3.5 h-3.5" /> Tournaments
             </button>
 
             <button
@@ -362,7 +393,7 @@ export function App() {
                 activeTab === 'FAN' ? 'bg-purple-600 text-white font-black shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
-              <Smartphone className="w-3.5 h-3.5" /> Fan View
+              <Smartphone className="w-3.5 h-3.5" /> Fan Center
             </button>
 
             <button
@@ -371,7 +402,7 @@ export function App() {
                 activeTab === 'TESTS' ? 'bg-rose-600 text-white font-black shadow-md' : 'text-slate-400 hover:text-white'
               }`}
             >
-              🧪 Rules
+              🧪 Rules Test
             </button>
 
             <button
@@ -386,12 +417,12 @@ export function App() {
       </header>
 
       {/* Cross-Device Mobile Setup Helper Box */}
-      <div className="bg-gradient-to-r from-blue-950/70 via-slate-900 to-indigo-950/70 border-b border-blue-900/50 px-4 py-2.5">
+      <div className="bg-gradient-to-r from-blue-950/70 via-slate-900 to-indigo-950/70 border-b border-blue-900/50 px-4 py-2">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2 text-blue-200 text-center sm:text-left">
             <Globe className="w-4 h-4 text-blue-400 shrink-0" />
             <span>
-              <strong>Stream on 2nd Mobile / OBS:</strong> Score from this device, open the overlay link on your other phone or streaming device!
+              <strong>Stream on 2nd Mobile / OBS:</strong> Score from this phone, open the overlay link on your other phone or streaming device!
             </span>
           </div>
 
@@ -411,38 +442,19 @@ export function App() {
       </div>
 
       {/* Main Workspace Body */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6">
         {activeTab === 'SCORER' && (
-          <div className="space-y-6">
-            {/* Live broadcast preview monitor strip */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <span className="w-3 h-3 rounded-full bg-emerald-400 animate-ping" />
-                <div>
-                  <span className="text-xs uppercase text-slate-400 font-bold">On Air Live Score</span>
-                  <div className="text-2xl font-black text-white font-mono">
-                    {snapshot.battingTeam.shortCode}: {snapshot.battingTeam.score}/{snapshot.battingTeam.wickets}{' '}
-                    <span className="text-sm text-slate-400 font-normal">
-                      ({snapshot.battingTeam.oversCompleted}.{snapshot.battingTeam.ballsThisOver} ov)
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="text-xs text-slate-400 flex items-center gap-4">
-                <span>Striker: <strong className="text-white">{snapshot.striker.name}</strong> ({snapshot.striker.runs}*)</span>
-                <span>Bowler: <strong className="text-white">{snapshot.currentBowler.name}</strong> ({snapshot.currentBowler.wickets}/{snapshot.currentBowler.runsConceded})</span>
-              </div>
-            </div>
-
-            <QuickScorePad
-              snapshot={snapshot}
-              onRecordBall={handleRecordBall}
-              onUndo={handleUndo}
-              onSwapStrike={handleSwapStrike}
-              onSelectBowler={handleSelectBowler}
-              overCompletedPrompt={overCompletedPrompt}
-            />
-          </div>
+          <CricScorerManagementPad
+            snapshot={snapshot}
+            onRecordBall={handleRecordBall}
+            onUndo={handleUndo}
+            onSwapStrike={handleSwapStrike}
+            onSelectBowler={handleSelectBowler}
+            onUpdateOverlay={handleUpdateOverlay}
+            onEmergencyAdjust={handleEmergencyAdjust}
+            onRetireBatter={handleRetireBatter}
+            overCompletedPrompt={overCompletedPrompt}
+          />
         )}
 
         {activeTab === 'DIRECTOR' && (

@@ -1,4 +1,4 @@
-import { LiveMatchSnapshot, MatchBallEvent, DismissalType, ExtraType, TournamentStanding } from '../types/cricket';
+import { LiveMatchSnapshot, MatchBallEvent, DismissalType, ExtraType, FallOfWicket } from '../types/cricket';
 
 export function calculateCRR(totalRuns: number, legalBalls: number): number {
   if (legalBalls === 0) return 0;
@@ -31,12 +31,13 @@ export function computeNRR(
 
 export function createInitialSnapshot(): LiveMatchSnapshot {
   return {
-    matchId: 'mt_2026_ipl_01',
-    tournamentName: 'T20 Premier Champions Trophy 2026',
+    matchId: 'mt_2026_csk_vs_mi',
+    tournamentName: 'Pvs Cricket Trophy 2026',
     status: 'INNINGS_1',
     currentInnings: 1,
-    totalOvers: 20,
-    maxOversPerBowler: 4,
+    totalOvers: 14,
+    maxOversPerBowler: 3,
+    tossDetails: 'Team A • Bat',
     battingTeam: {
       id: 'tm_csk',
       name: 'Super Kings',
@@ -47,12 +48,15 @@ export function createInitialSnapshot(): LiveMatchSnapshot {
       wickets: 3,
       oversCompleted: 12,
       ballsThisOver: 4,
+      totalFours: 9,
+      totalSixes: 4,
     },
     bowlingTeam: {
       id: 'tm_mi',
       name: 'Mumbai Champions',
       shortCode: 'MI',
       logoUrl: 'https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=128&auto=format&fit=crop&q=80',
+      primaryColor: '#3b82f6',
     },
     striker: {
       id: 'pl_01',
@@ -83,7 +87,11 @@ export function createInitialSnapshot(): LiveMatchSnapshot {
     },
     previousBowlerId: 'bw_02',
     isFreeHit: false,
+    target: 113,
+    runsNeeded: 1,
+    ballsRemaining: 8,
     crr: 8.84,
+    rrr: 0.75,
     currentOverDeliveries: [
       { badge: '1', isWicket: false, isBoundary: false, isExtra: false },
       { badge: '4', isWicket: false, isBoundary: true, isExtra: false },
@@ -92,13 +100,34 @@ export function createInitialSnapshot(): LiveMatchSnapshot {
     ],
     partnershipRuns: 28,
     partnershipBalls: 16,
+    fallOfWickets: [
+      { wicketNumber: 1, score: 32, over: '3.2', playerOut: 'D. Conway' },
+      { wicketNumber: 2, score: 68, over: '7.4', playerOut: 'S. Dube' },
+      { wicketNumber: 3, score: 84, over: '10.1', playerOut: 'A. Rahane' },
+    ],
+    momPlayer: 'R. Sharma',
     overlayState: {
+      isBottomScorebarEnabled: true,
       isLowerThirdVisible: true,
+      activePopup: 'NONE',
       activeCard: 'NONE',
       activeAlert: 'NONE',
       reviewBanner: 'NONE',
       sponsorBugVisible: false,
       theme: 'neon',
+      customBannerText: '',
+      tvLogo: {
+        enabled: true,
+        text: 'CRICKCONNECT',
+        subText: 'LIVE HD',
+      },
+      autoAnimationEnabled: true,
+      isPowerplayActive: false,
+    },
+    innings1Total: {
+      score: 112,
+      wickets: 10,
+      legalBalls: 84, // 14 overs
     },
   };
 }
@@ -121,7 +150,9 @@ export function applyBallEvent(
   prev: LiveMatchSnapshot,
   params: BallInputParams
 ): { nextSnapshot: LiveMatchSnapshot; event: MatchBallEvent; overCompleted: boolean } {
-  const isLegal = params.extraType !== 'WIDE' && params.extraType !== 'NO_BALL';
+  // Mankad does not count as legal ball
+  const isMankad = params.dismissalType === 'MANKAD';
+  const isLegal = params.extraType !== 'WIDE' && params.extraType !== 'NO_BALL' && !isMankad;
   const totalRunsThisBall = params.batsmanRuns + params.extraRuns;
   
   // Clone state
@@ -152,12 +183,18 @@ export function applyBallEvent(
   }
 
   // 4. Update Batter Stats
-  if (params.extraType !== 'WIDE') {
+  if (params.extraType !== 'WIDE' && !isMankad) {
     next.striker.balls += 1;
   }
   next.striker.runs += params.batsmanRuns;
-  if (params.batsmanRuns === 4) next.striker.fours += 1;
-  if (params.batsmanRuns === 6) next.striker.sixes += 1;
+  if (params.batsmanRuns === 4) {
+    next.striker.fours += 1;
+    next.battingTeam.totalFours = (next.battingTeam.totalFours || 0) + 1;
+  }
+  if (params.batsmanRuns === 6) {
+    next.striker.sixes += 1;
+    next.battingTeam.totalSixes = (next.battingTeam.totalSixes || 0) + 1;
+  }
 
   // 5. Update Partnership
   next.partnershipRuns += totalRunsThisBall;
@@ -166,12 +203,27 @@ export function applyBallEvent(
   // 6. Handle Wickets & ICC 2022 Caught Rule
   if (params.isWicket) {
     next.battingTeam.wickets += 1;
-    next.currentBowler.wickets += 1;
+    if (params.dismissalType !== 'RUN_OUT_STRIKER' && params.dismissalType !== 'RUN_OUT_NON_STRIKER' && !isMankad) {
+      next.currentBowler.wickets += 1;
+    }
+
+    const currentOverStr = `${next.battingTeam.oversCompleted}.${next.battingTeam.ballsThisOver}`;
+    const outPlayerName = params.dismissedPlayerId === next.nonStriker.id || params.dismissalType === 'RUN_OUT_NON_STRIKER' || isMankad
+      ? next.nonStriker.name
+      : next.striker.name;
+
+    const newFow: FallOfWicket = {
+      wicketNumber: next.battingTeam.wickets,
+      score: next.battingTeam.score,
+      over: currentOverStr,
+      playerOut: outPlayerName,
+    };
+    next.fallOfWickets = [...(next.fallOfWickets || []), newFow];
+
     next.partnershipRuns = 0;
     next.partnershipBalls = 0;
 
-    const outPlayerName = params.dismissedPlayerId === next.nonStriker.id ? next.nonStriker.name : next.striker.name;
-    const incomingName = params.newBatterName || 'New Batter';
+    const incomingName = params.newBatterName || `Batter #${next.battingTeam.wickets + 2}`;
 
     if (params.dismissalType === 'CAUGHT') {
       // ICC Rule 18.11 (Oct 2022): Incoming batter ALWAYS assumes strike
@@ -184,7 +236,7 @@ export function applyBallEvent(
         sixes: 0,
         isOut: false,
       };
-    } else if (params.dismissedPlayerId === next.nonStriker.id) {
+    } else if (params.dismissedPlayerId === next.nonStriker.id || params.dismissalType === 'RUN_OUT_NON_STRIKER' || isMankad) {
       next.nonStriker = {
         id: `pl_${Date.now()}`,
         name: incomingName,
@@ -211,11 +263,10 @@ export function applyBallEvent(
   if (params.extraType === 'NO_BALL') {
     next.isFreeHit = true;
   } else if (isLegal) {
-    next.isFreeHit = false; // Legal ball exhausts Free Hit
+    next.isFreeHit = false;
   }
 
   // 8. Strike Rotation
-  // Odd runs rotate strike (unless wicket just handled it)
   if (params.batsmanRuns % 2 !== 0 && !params.isWicket) {
     const temp = next.striker;
     next.striker = next.nonStriker;
@@ -288,4 +339,66 @@ export function applyBallEvent(
   };
 
   return { nextSnapshot: next, event, overCompleted };
+}
+
+/**
+ * Emergency match adjustments directly updating score, wickets, or overs
+ */
+export function applyEmergencyAdjustment(
+  snapshot: LiveMatchSnapshot,
+  adjustments: {
+    inning1Runs?: number;
+    inning1Wickets?: number;
+    inning1Balls?: number;
+    inning2Runs?: number;
+    inning2Wickets?: number;
+    inning2Balls?: number;
+  }
+): LiveMatchSnapshot {
+  const next: LiveMatchSnapshot = JSON.parse(JSON.stringify(snapshot));
+
+  if (adjustments.inning1Runs !== undefined) {
+    if (!next.innings1Total) {
+      next.innings1Total = { score: adjustments.inning1Runs, wickets: 0, legalBalls: 0 };
+    }
+    next.innings1Total.score = adjustments.inning1Runs;
+    // Target is Inning 1 runs + 1
+    next.target = adjustments.inning1Runs + 1;
+  }
+  if (adjustments.inning1Wickets !== undefined && next.innings1Total) {
+    next.innings1Total.wickets = adjustments.inning1Wickets;
+  }
+  if (adjustments.inning1Balls !== undefined && next.innings1Total) {
+    next.innings1Total.legalBalls = adjustments.inning1Balls;
+  }
+
+  // If current innings is 1 and adjusting inning 1
+  if (next.currentInnings === 1) {
+    if (adjustments.inning1Runs !== undefined) next.battingTeam.score = adjustments.inning1Runs;
+    if (adjustments.inning1Wickets !== undefined) next.battingTeam.wickets = adjustments.inning1Wickets;
+    if (adjustments.inning1Balls !== undefined) {
+      next.battingTeam.oversCompleted = Math.floor(adjustments.inning1Balls / 6);
+      next.battingTeam.ballsThisOver = adjustments.inning1Balls % 6;
+    }
+  }
+
+  // If adjusting inning 2
+  if (next.currentInnings === 2) {
+    if (adjustments.inning2Runs !== undefined) next.battingTeam.score = adjustments.inning2Runs;
+    if (adjustments.inning2Wickets !== undefined) next.battingTeam.wickets = adjustments.inning2Wickets;
+    if (adjustments.inning2Balls !== undefined) {
+      next.battingTeam.oversCompleted = Math.floor(adjustments.inning2Balls / 6);
+      next.battingTeam.ballsThisOver = adjustments.inning2Balls % 6;
+    }
+  }
+
+  const totalLegalBalls = next.battingTeam.oversCompleted * 6 + next.battingTeam.ballsThisOver;
+  next.crr = calculateCRR(next.battingTeam.score, totalLegalBalls);
+  if (next.target) {
+    next.runsNeeded = Math.max(0, next.target - next.battingTeam.score);
+    next.ballsRemaining = Math.max(0, next.totalOvers * 6 - totalLegalBalls);
+    next.rrr = calculateRRR(next.runsNeeded, next.ballsRemaining);
+  }
+
+  return next;
 }

@@ -9,7 +9,8 @@ interface LowerThirdProps {
 export const LowerThirdScorebar: React.FC<LowerThirdProps> = ({ snapshot }) => {
   const { battingTeam, striker, nonStriker, currentBowler, currentOverDeliveries, isFreeHit, overlayState, crr, rrr, target, runsNeeded, ballsRemaining } = snapshot;
 
-  if (!overlayState.isLowerThirdVisible) {
+  const isEnabled = overlayState.isBottomScorebarEnabled ?? overlayState.isLowerThirdVisible ?? true;
+  if (!isEnabled) {
     return null;
   }
 
